@@ -1,3 +1,3 @@
 [submodule "simpleSSD_IMS"]
-	path = simpleSSD_IMS
-	url = https://github.com/timatm/simpleSSD_IMS.git
+	path = ims
+	url = git@github.com:timatm/simpleSSD_IMS.git
