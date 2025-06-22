@@ -709,26 +709,40 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
   CQEntryWrapper resp(req);
 
   // Parse IMS command
-  uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
-  uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
+  char buf[25] = {0};
+  uint32_t dwords[6] = {
+        req.entry.dword10,
+        req.entry.dword11,
+        req.entry.dword12,
+        req.entry.dword13,
+        req.entry.dword14,
+        req.entry.dword15
+  };
+  memcpy(buf, dwords, sizeof(dwords));
+  std::string filename(buf);
+  
+  // hostInfo request(filename);
+  // ims.write_sstable(request,);
+  
+  // uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+  // uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
 
   if (!attached) {
     err = true;
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
                     STATUS_NAMESPACE_NOT_ATTACHED);
   }
-  if (nlb == 0) {
-    err = true;
-    warn("nvme_namespace: host tried to write 0 blocks");
-  }
+  // if (nlb == 0) {
+  //   err = true;
+  //   warn("nvme_namespace: host tried to write 0 blocks");
+  // }
 
   debugprint(LOG_IMS,
-             "NVM     | write_sstable | SQ %u:%u | CID %u | NSID %-5d | %" PRIX64
-             " + %d",
-             req.sqID, req.sqUID, req.entry.dword0.commandID, nsid, slba, nlb);
+             "NVM     | write_sstable | SQ %u:%u | CID %u | NSID %-5d | Filename %s",
+             req.sqID, req.sqUID, req.entry.dword0.commandID, nsid,filename);
 
   if (!err) {
-    DMAFunction doRead = [this](uint64_t tick, void *context) {
+    DMAFunction doread = [this](uint64_t tick, void *context) {
       DMAFunction dmaDone = [this](uint64_t tick, void *context) {
         IOContext *pContext = (IOContext *)context;
 
@@ -747,6 +761,7 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
 
           if (pContext->buffer) {
             pDisk->write(pContext->slba, pContext->nlb, pContext->buffer);
+
             free(pContext->buffer);
           }
 
@@ -761,13 +776,13 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
       pContext->beginAt = 0;
 
       if (pDisk) {
-        pContext->buffer = (uint8_t *)calloc(pContext->nlb, info.lbaSize);
+        pContext->buffer = (uint8_t *)calloc(BLOCK_SIZE, 1);
 
-        pContext->dma->read(0, pContext->nlb * info.lbaSize, pContext->buffer,
+        pContext->dma->read(0, (uint64_t)BLOCK_SIZE, pContext->buffer,
                             dmaDone, context);
       }
       else {
-        pContext->dma->read(0, pContext->nlb * info.lbaSize, nullptr, dmaDone,
+        pContext->dma->read(0, (uint64_t)BLOCK_SIZE, nullptr, dmaDone,
                             context);
       }
 
@@ -777,11 +792,11 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
     IOContext *pContext = new IOContext(func, resp);
 
     pContext->beginAt = getTick();
-    pContext->slba = slba;
-    pContext->nlb = nlb;
+    // pContext->slba = slba;
+    // pContext->nlb = nlb;
 
     CPUContext *pCPU =
-        new CPUContext(doRead, pContext, CPU::NVME__NAMESPACE, CPU::WRITE);
+        new CPUContext(doread, pContext, CPU::NVME__NAMESPACE, CPU::WRITE);
 
     if (req.useSGL) {
       pContext->dma =
@@ -790,13 +805,15 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
     else {
       pContext->dma =
           new PRPList(cfgdata, cpuHandler, pCPU, req.entry.data1,
-                      req.entry.data2, (uint64_t)nlb * info.lbaSize);
+                      req.entry.data2, (uint64_t)BLOCK_SIZE);
     }
   }
   else {
     func(resp);
   }
 }
+
+
 }  // namespace NVMe
 
 }  // namespace HIL

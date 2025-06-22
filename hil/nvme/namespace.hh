@@ -28,6 +28,11 @@
 #include "util/def.hh"
 #include "util/disk.hh"
 #include "util/simplessd.hh"
+#include "ims/src/def.hh"
+#include "ims/src/IMS_interface.hh"
+
+
+
 
 namespace SimpleSSD {
 
@@ -80,6 +85,7 @@ class CompareContext : public IOContext {
 
 class Namespace {
  public:
+  IMS_interface ims;
   typedef struct _Information {
     uint64_t size;                         //!< NSZE
     uint64_t capacity;                     //!< NCAP
@@ -122,7 +128,14 @@ class Namespace {
 
   // Custom commands
   void write_sstable(SQEntryWrapper &, RequestFunction &);
-  
+  void read_sstable(SQEntryWrapper &, RequestFunction &);
+  void write_log(SQEntryWrapper &, RequestFunction &);
+  void read_log(SQEntryWrapper &, RequestFunction &);
+  void search_key(SQEntryWrapper &, RequestFunction &);
+  void init_IMS(SQEntryWrapper &, RequestFunction &);
+  void close_IMS(SQEntryWrapper &, RequestFunction &);
+
+
  public:
   Namespace(Subsystem *, ConfigData &);
   ~Namespace();

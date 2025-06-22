@@ -238,7 +238,7 @@ uint16_t Disk::write_page(diskRequest request, uint8_t *buffer) {
 uint16_t Disk::write_sstable(diskRequest request,uint8_t *buffer){
   uint16_t ret = 0;
   if (disk.is_open()) {
-    for(int i = 0;i < request.totalPageNum;i++){
+    for(uint32_t i = 0;i < request.totalPageNum;i++){
       diskRequest pageReq = request;
       uint8_t *page_ptr = buffer + i * request.pageSize;
       pageReq.page = i;
@@ -309,7 +309,7 @@ uint16_t Disk::read_sstable(diskRequest request, uint8_t *buffer) {
   uint16_t ret = 0;
 
   if (disk.is_open()) {
-    for (int i = 0; i < request.totalPageNum; i++) {
+    for (uint32_t i = 0; i < request.totalPageNum; i++) {
       diskRequest pageReq = request;
       pageReq.page = i;
 

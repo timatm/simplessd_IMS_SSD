@@ -44,7 +44,7 @@ endif ()
 
 # Add subproject
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/mcpat)
-
+add_subdirectory(${PROJECT_SOURCE_DIR}/ims/src)
 # Set include directories
 include_directories(
   ${PROJECT_SOURCE_DIR}
@@ -195,4 +195,4 @@ add_library(simplessd STATIC
   ${SRC_SIM}
   ${SRC_UTIL}
 )
-target_link_libraries(simplessd mcpat)
+target_link_libraries(simplessd mcpat mapping_lib)

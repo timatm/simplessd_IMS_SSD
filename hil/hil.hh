@@ -26,6 +26,7 @@
 #include "sim/dma_interface.hh"
 #include "util/simplessd.hh"
 
+
 namespace SimpleSSD {
 
 namespace HIL {
@@ -34,7 +35,7 @@ class HIL : public StatObject {
  private:
   ConfigReader &conf;
   ICL::ICL *pICL;
-
+  
   uint64_t reqCount;
 
   uint64_t lastScheduled;
@@ -60,6 +61,8 @@ class HIL : public StatObject {
   void write(Request &);
   void flush(Request &);
   void trim(Request &);
+
+  void write_sstable(Request &);
 
   void format(Request &, bool);
 
