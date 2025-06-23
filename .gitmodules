@@ -2,3 +2,4 @@
 [submodule "ims"]
 	path = ims
 	url = git@github.com:timatm/simpleSSD_IMS.git
+	branch = main
