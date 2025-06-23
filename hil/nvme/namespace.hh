@@ -71,7 +71,9 @@ class IOContext : public RequestContext {
   uint64_t slba;
   uint64_t nlb;
   uint64_t tick;
-
+  uint64_t lpn;
+  uint64_t nlpn;
+  uint64_t lbn;
   IOContext(RequestFunction &f, CQEntryWrapper &r) : RequestContext(f, r) {}
 };
 

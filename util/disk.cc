@@ -18,7 +18,8 @@
  */
 
 #include "util/disk.hh"
-
+#include "ims/src/def.hh"
+#include "ims/src/print.hh"
 #include <cstring>
 
 
@@ -185,150 +186,249 @@ uint16_t Disk::erase(uint64_t, uint16_t nlblk) {
 
 // Custom disk operations implementation
 
-uint16_t Disk::write_page(diskRequest request, uint8_t *buffer) {
-  uint16_t ret = 0;
-  if (disk.is_open()) {
-    uint64_t blockOffset = request.pageSize * request.totalPageNum;
-    uint64_t dieOffset = blockOffset * request.totalBlockNum;
-    uint64_t wayOffset = dieOffset * request.totalDieNum;
-    uint64_t planeOffset = wayOffset * request.totalWayNum;
-    uint64_t chOffset = planeOffset * request.totalPlaneNum;
-    uint64_t fileOffset = ((uint64_t)request.ch     * chOffset) +
-                          ((uint64_t)request.plane  * planeOffset) +
-                          ((uint64_t)request.way    * wayOffset) +
-                          ((uint64_t)request.die    * dieOffset) +
-                          ((uint64_t)request.block  * blockOffset) +
-                          ((uint64_t)request.page   * request.pageSize);
+// uint16_t Disk::write_page(diskRequest request, uint8_t *buffer) {
+//   uint16_t ret = 0;
+//   if (disk.is_open()) {
+//     uint64_t blockOffset = request.pageSize * request.totalPageNum;
+//     uint64_t dieOffset = blockOffset * request.totalBlockNum;
+//     uint64_t wayOffset = dieOffset * request.totalDieNum;
+//     uint64_t planeOffset = wayOffset * request.totalWayNum;
+//     uint64_t chOffset = planeOffset * request.totalPlaneNum;
+//     uint64_t fileOffset = ((uint64_t)request.ch     * chOffset) +
+//                           ((uint64_t)request.plane  * planeOffset) +
+//                           ((uint64_t)request.way    * wayOffset) +
+//                           ((uint64_t)request.die    * dieOffset) +
+//                           ((uint64_t)request.block  * blockOffset) +
+//                           ((uint64_t)request.page   * request.pageSize);
 
-    uint64_t diskSize = request.pageSize * request.totalPageNum * request.totalBlockNum * request.totalWayNum 
-                        * request.totalPlaneNum * request.totalChNum;
+//     uint64_t diskSize = request.pageSize * request.totalPageNum * request.totalBlockNum * request.totalWayNum 
+//                         * request.totalPlaneNum * request.totalChNum;
 
-    disk.seekp(fileOffset, std::ios::beg);
+//     disk.seekp(fileOffset, std::ios::beg);
+//     if (!disk.good()) {
+//       // panic("nvme_disk: Fail to seek to %" PRIu64 "\n", slba);
+//     }
+
+//     if (fileOffset + request.pageSize > diskSize) {
+//       if (fileOffset >= diskSize) {
+//         debugprint(LOG_IMS, "DISK    | write_page | write pointer out of bound");
+//         return 0;
+//       } else {
+//         // can't write whole page
+//         debugprint(LOG_IMS, "DISK    | write_page | partial write blocked");
+//         return 0;
+//       }
+//     }
+
+//     uint64_t offset = disk.tellp();
+//     disk.write((char *)buffer, request.pageSize);
+//     offset = (uint64_t)disk.tellp() - offset;
+//     debugprint(LOG_IMS,
+//       "DISK    | write_page | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",request.ch,request.plane,request.way,request.die,request.block,request.page);
+//     debugprint(LOG_IMS,
+//                "DISK    | write_page | BYTE %016" PRIX64 " + %X\n", fileOffset, offset);
+//     // DPRINTF(NVMeDisk, "DISK    | WRITE | BYTE %016" PRIX64 " + %X\n", slba,
+//     //         offset);
+
+//     ret = offset;
+//   }
+
+//   return ret;
+// }
+
+// uint16_t Disk::write_sstable(diskRequest request,uint8_t *buffer){
+//   uint16_t ret = 0;
+//   if (disk.is_open()) {
+//     for(uint32_t i = 0;i < request.totalPageNum;i++){
+//       diskRequest pageReq = request;
+//       uint8_t *page_ptr = buffer + i * request.pageSize;
+//       pageReq.page = i;
+//       debugprint(LOG_IMS,
+//         "DISK    | write_sstable | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",request.ch,request.plane,request.way,request.die,request.block,request.page);
+//       uint16_t written = write_page(pageReq, page_ptr);
+//       if (written == 0) {
+//         debugprint(LOG_IMS, "DISK    | write_sstable | page %d write failed", i);
+//         break;
+//       }
+//       ret += written;
+//     }
+//   }
+
+//   return ret;
+// }
+
+// uint16_t Disk::read_page(diskRequest request,uint8_t *buffer){
+//   uint16_t ret = 0;
+//   uint32_t readSize = request.pageSize;
+//   if (disk.is_open()) {
+//     uint64_t blockOffset = request.pageSize * request.totalPageNum;
+//     uint64_t dieOffset = blockOffset * request.totalBlockNum;
+//     uint64_t wayOffset = dieOffset * request.totalDieNum;
+//     uint64_t planeOffset = wayOffset * request.totalWayNum;
+//     uint64_t chOffset = planeOffset * request.totalPlaneNum;
+//     uint64_t fileOffset = ((uint64_t)request.ch     * chOffset) +
+//                           ((uint64_t)request.plane  * planeOffset) +
+//                           ((uint64_t)request.way    * wayOffset) +
+//                           ((uint64_t)request.die    * dieOffset) +
+//                           ((uint64_t)request.block  * blockOffset) +
+//                           ((uint64_t)request.page   * request.pageSize);
+
+//     uint64_t diskSize = request.pageSize * request.totalPageNum * request.totalBlockNum * request.totalWayNum 
+//                         * request.totalPlaneNum * request.totalChNum;
+//     // 邊界檢查（避免越界）
+//     if (fileOffset + readSize > diskSize) {
+//       // 調整為只讀得下的部分，或完全不讀
+//       if (fileOffset >= diskSize) {
+//         debugprint(LOG_IMS,
+//         "DISK    | read_page | read pointer is out of bound");
+//         return 0;
+//       } else {
+//         readSize = diskSize - fileOffset;
+//       }
+//     }
+
+//     disk.seekg(fileOffset, std::ios::beg);
+//     if (!disk.good()) {
+//       // panic("nvme_disk: Seek failed at offset %" PRIu64 "\n", offset);
+//       return 0;
+//     }
+
+//     disk.read((char *)buffer, readSize);
+
+//     std::streamsize bytesRead = disk.gcount();
+//     if (bytesRead < request.pageSize) {
+//       memset(buffer + bytesRead, 0, request.pageSize - bytesRead);
+//     }
+
+//     ret = 1;
+//   }
+
+//   return ret;
+// }
+
+// uint16_t Disk::read_sstable(diskRequest request, uint8_t *buffer) {
+//   uint16_t ret = 0;
+
+//   if (disk.is_open()) {
+//     for (uint32_t i = 0; i < request.totalPageNum; i++) {
+//       diskRequest pageReq = request;
+//       pageReq.page = i;
+
+//       uint8_t *page_ptr = buffer + i * request.pageSize;
+
+//       debugprint(LOG_IMS,
+//         "DISK    | read_sstable | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",
+//         pageReq.ch, pageReq.plane, pageReq.way, pageReq.die, pageReq.block, pageReq.page);
+
+//       uint16_t read_result = read_page(pageReq, page_ptr);
+//       if (read_result == 0) {
+//         debugprint(LOG_IMS, "DISK    | read_sstable | page %d read failed", i);
+//         break;
+//       }
+//       ret += read_result;
+//     }
+//   }
+
+//   return ret;
+// }
+
+uint16_t Disk::readPage(uint64_t lpn, uint8_t *buffer) {
+    if (!disk.is_open()) {
+        throw std::runtime_error("Disk not opened.");
+    }
+
+    uint64_t offset = lpn * IMSPAGE_SIZE;
+
+    // 移動到指定 offset
+    disk.seekg(offset, std::ios::beg);
     if (!disk.good()) {
-      // panic("nvme_disk: Fail to seek to %" PRIu64 "\n", slba);
+        throw std::runtime_error("Seek failed.");
     }
 
-    if (fileOffset + request.pageSize > diskSize) {
-      if (fileOffset >= diskSize) {
-        debugprint(LOG_IMS, "DISK    | write_page | write pointer out of bound");
-        return 0;
-      } else {
-        // can't write whole page
-        debugprint(LOG_IMS, "DISK    | write_page | partial write blocked");
-        return 0;
-      }
-    }
-
-    uint64_t offset = disk.tellp();
-    disk.write((char *)buffer, request.pageSize);
-    offset = (uint64_t)disk.tellp() - offset;
-    debugprint(LOG_IMS,
-      "DISK    | write_page | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",request.ch,request.plane,request.way,request.die,request.block,request.page);
-    debugprint(LOG_IMS,
-               "DISK    | write_page | BYTE %016" PRIX64 " + %X\n", fileOffset, offset);
-    // DPRINTF(NVMeDisk, "DISK    | WRITE | BYTE %016" PRIX64 " + %X\n", slba,
-    //         offset);
-
-    ret = offset;
-  }
-
-  return ret;
-}
-
-uint16_t Disk::write_sstable(diskRequest request,uint8_t *buffer){
-  uint16_t ret = 0;
-  if (disk.is_open()) {
-    for(uint32_t i = 0;i < request.totalPageNum;i++){
-      diskRequest pageReq = request;
-      uint8_t *page_ptr = buffer + i * request.pageSize;
-      pageReq.page = i;
-      debugprint(LOG_IMS,
-        "DISK    | write_sstable | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",request.ch,request.plane,request.way,request.die,request.block,request.page);
-      uint16_t written = write_page(pageReq, page_ptr);
-      if (written == 0) {
-        debugprint(LOG_IMS, "DISK    | write_sstable | page %d write failed", i);
-        break;
-      }
-      ret += written;
-    }
-  }
-
-  return ret;
-}
-
-uint16_t Disk::read_page(diskRequest request,uint8_t *buffer){
-  uint16_t ret = 0;
-  uint32_t readSize = request.pageSize;
-  if (disk.is_open()) {
-    uint64_t blockOffset = request.pageSize * request.totalPageNum;
-    uint64_t dieOffset = blockOffset * request.totalBlockNum;
-    uint64_t wayOffset = dieOffset * request.totalDieNum;
-    uint64_t planeOffset = wayOffset * request.totalWayNum;
-    uint64_t chOffset = planeOffset * request.totalPlaneNum;
-    uint64_t fileOffset = ((uint64_t)request.ch     * chOffset) +
-                          ((uint64_t)request.plane  * planeOffset) +
-                          ((uint64_t)request.way    * wayOffset) +
-                          ((uint64_t)request.die    * dieOffset) +
-                          ((uint64_t)request.block  * blockOffset) +
-                          ((uint64_t)request.page   * request.pageSize);
-
-    uint64_t diskSize = request.pageSize * request.totalPageNum * request.totalBlockNum * request.totalWayNum 
-                        * request.totalPlaneNum * request.totalChNum;
-    // 邊界檢查（避免越界）
-    if (fileOffset + readSize > diskSize) {
-      // 調整為只讀得下的部分，或完全不讀
-      if (fileOffset >= diskSize) {
-        debugprint(LOG_IMS,
-        "DISK    | read_page | read pointer is out of bound");
-        return 0;
-      } else {
-        readSize = diskSize - fileOffset;
-      }
-    }
-
-    disk.seekg(fileOffset, std::ios::beg);
+    // 讀取資料
+    disk.read(reinterpret_cast<char *>(buffer), IMSPAGE_SIZE);
     if (!disk.good()) {
-      // panic("nvme_disk: Seek failed at offset %" PRIu64 "\n", offset);
-      return 0;
+        throw std::runtime_error("Read error or EOF.");
     }
 
-    disk.read((char *)buffer, readSize);
-
-    std::streamsize bytesRead = disk.gcount();
-    if (bytesRead < request.pageSize) {
-      memset(buffer + bytesRead, 0, request.pageSize - bytesRead);
-    }
-
-    ret = 1;
-  }
-
-  return ret;
+    return 1;  // 讀取成功 1 page
 }
 
-uint16_t Disk::read_sstable(diskRequest request, uint8_t *buffer) {
-  uint16_t ret = 0;
 
-  if (disk.is_open()) {
-    for (uint32_t i = 0; i < request.totalPageNum; i++) {
-      diskRequest pageReq = request;
-      pageReq.page = i;
-
-      uint8_t *page_ptr = buffer + i * request.pageSize;
-
-      debugprint(LOG_IMS,
-        "DISK    | read_sstable | CH: %d | PLANE: %d | WAY: %d | DIE: %d | BLOCK: %d | PAGE: %d",
-        pageReq.ch, pageReq.plane, pageReq.way, pageReq.die, pageReq.block, pageReq.page);
-
-      uint16_t read_result = read_page(pageReq, page_ptr);
-      if (read_result == 0) {
-        debugprint(LOG_IMS, "DISK    | read_sstable | page %d read failed", i);
-        break;
-      }
-      ret += read_result;
+uint16_t Disk::writePage(uint64_t lpn,uint8_t *buffer) {
+    if (!disk.is_open()) {
+        throw std::runtime_error("Disk not opened.");
     }
-  }
 
-  return ret;
+    uint64_t offset = lpn * IMSPAGE_SIZE;
+
+    // 移動到對應位置
+    disk.seekp(offset, std::ios::beg);
+    if (!disk.good()) {
+        throw std::runtime_error("Seek failed.");
+    }
+
+    // 寫入資料
+    disk.write(reinterpret_cast<const char *>(buffer), IMSPAGE_SIZE);
+    if (!disk.good()) {
+        throw std::runtime_error("Write failed.");
+    }
+
+    // 確保資料刷新到磁碟
+    disk.flush();
+    if (!disk.good()) {
+        throw std::runtime_error("Flush failed.");
+    }
+
+    return 1;  // 寫入了一個 page
+}
+
+
+uint16_t Disk::writeBlock(uint64_t lbn, uint8_t *buffer) {
+    if (!disk.is_open()) {
+        throw std::runtime_error("Disk not opened.");
+    }
+
+    uint16_t ret = 0;
+    uint64_t baseLpn = LBN2LPN(lbn);
+
+    for (int i = 0; i < IMSPAGE_NUM; i++) {
+        uint64_t lpn = baseLpn + i;
+        uint8_t *page_ptr = buffer + i * IMSPAGE_SIZE;
+
+        uint16_t written = writePage(lpn, page_ptr);
+        if (written == 0) {
+            pr_info("[ERROR] write block failed at page: %d LPN: %lu", i, lpn);
+            break;
+        }
+        ret += written;
+    }
+
+    return ret;
+}
+
+
+uint16_t Disk::readBlock(uint64_t lbn, uint8_t *buffer) {
+    if (!disk.is_open()) {
+        throw std::runtime_error("Disk not opened.");
+    }
+
+    uint16_t ret = 0;
+    uint64_t baseLpn = LBN2LPN(lbn);
+
+    for (int i = 0; i < IMSPAGE_NUM; i++) {
+        uint64_t lpn = baseLpn + i;
+        uint8_t *page_ptr = buffer + i * IMSPAGE_SIZE;
+
+        uint16_t read_result = readPage(lpn, page_ptr);
+        if (read_result == 0) {
+            pr_info("[ERROR] read block failed at page: %d LPN: %lu", i, lpn);
+            break;
+        }
+        ret += read_result;
+    }
+
+    return ret;
 }
 
 
@@ -460,5 +560,7 @@ uint16_t MemDisk::erase(uint64_t slba, uint16_t nlblk) {
 
   return erase;
 }
+
+
 
 }  // namespace SimpleSSD

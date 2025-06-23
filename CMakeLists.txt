@@ -194,5 +194,6 @@ add_library(simplessd STATIC
   ${SRC_PAL_OLD}
   ${SRC_SIM}
   ${SRC_UTIL}
+  $<TARGET_OBJECTS:mapping_obj>
 )
-target_link_libraries(simplessd mcpat mapping_lib)
+target_link_libraries(simplessd mcpat)

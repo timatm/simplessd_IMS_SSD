@@ -18,7 +18,7 @@
  */
 
 #include "hil/nvme/namespace.hh"
-
+#include "ims/src/IMS_interface.hh"
 #include "hil/nvme/subsystem.hh"
 #include "util/algorithm.hh"
 
@@ -720,9 +720,13 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
   };
   memcpy(buf, dwords, sizeof(dwords));
   std::string filename(buf);
-  
-  // hostInfo request(filename);
-  // ims.write_sstable(request,);
+  uint32_t level = 0;
+  uint32_t min =  0;
+  uint32_t max = 0;
+  uint8_t *buffer  = new uint8_t[2]; // dummy buffer not real data
+  hostInfo request(filename,level,min,max);
+  request.lbn = INVALIDLBN;
+  ims.write_sstable(&request,buffer);
   
   // uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
   // uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
@@ -732,15 +736,22 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
                     STATUS_NAMESPACE_NOT_ATTACHED);
   }
+  if(request.lbn == INVALIDLBN) {
+    err = true;
+    resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                    STATUS_LBN_INVALID);
+  }
   // if (nlb == 0) {
   //   err = true;
   //   warn("nvme_namespace: host tried to write 0 blocks");
   // }
 
   debugprint(LOG_IMS,
-             "NVM     | write_sstable | SQ %u:%u | CID %u | NSID %-5d | Filename %s",
-             req.sqID, req.sqUID, req.entry.dword0.commandID, nsid,filename);
-
+             "NVM     | write_sstable | SQ %u:%u | CID %u | NSID %-5d",
+             req.sqID, req.sqUID, req.entry.dword0.commandID, nsid);
+  debugprint(LOG_IMS,
+             "NVM     | write_sstable | Filename %s | Level %d | MinRange %d | MaxRange %d | LBN %ld",
+             request.filename, request.levelInfo, request.rangeMin, request.rangeMax, request.lbn);
   if (!err) {
     DMAFunction doread = [this](uint64_t tick, void *context) {
       DMAFunction dmaDone = [this](uint64_t tick, void *context) {
@@ -760,7 +771,7 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
           pContext->function(pContext->resp);
 
           if (pContext->buffer) {
-            pDisk->write(pContext->slba, pContext->nlb, pContext->buffer);
+            pDisk->writeBlock(pContext->lbn,pContext->buffer);
 
             free(pContext->buffer);
           }
@@ -786,15 +797,15 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
                             context);
       }
 
-      pParent->write(this, pContext->slba, pContext->nlb, dmaDone, context);
+      pParent->writeIMS(this, pContext->lpn, pContext->nlpn, dmaDone, context);
     };
 
     IOContext *pContext = new IOContext(func, resp);
 
     pContext->beginAt = getTick();
-    // pContext->slba = slba;
-    // pContext->nlb = nlb;
-
+    pContext->lpn = LBN2LPN(request.lbn);
+    pContext->nlpn = IMSPAGE_NUM;
+    pContext->lbn = request.lbn;
     CPUContext *pCPU =
         new CPUContext(doread, pContext, CPU::NVME__NAMESPACE, CPU::WRITE);
 

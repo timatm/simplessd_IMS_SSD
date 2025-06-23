@@ -49,10 +49,14 @@ class Disk {
   virtual uint16_t read(uint64_t, uint16_t, uint8_t *);
   virtual uint16_t write(uint64_t, uint16_t, uint8_t *);
   virtual uint16_t erase(uint64_t, uint16_t);
-  virtual uint16_t write_sstable(diskRequest,uint8_t *);
-  virtual uint16_t read_sstable(diskRequest,uint8_t *);
-  virtual uint16_t read_page(diskRequest, uint8_t *);
-  virtual uint16_t write_page(diskRequest, uint8_t *);
+  // virtual uint16_t write_sstable(diskRequest,uint8_t *);
+  // virtual uint16_t read_sstable(diskRequest,uint8_t *);
+  // virtual uint16_t read_page(diskRequest, uint8_t *);
+  // virtual uint16_t write_page(diskRequest, uint8_t *);
+  virtual uint16_t writePage(uint64_t, uint8_t *);
+  virtual uint16_t readPage(uint64_t, uint8_t *);
+  virtual uint16_t writeBlock(uint64_t, uint8_t *);
+  virtual uint16_t readBlock(uint64_t, uint8_t *);
 };
 
 class CoWDisk : public Disk {

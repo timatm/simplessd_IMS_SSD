@@ -76,6 +76,7 @@ class Subsystem : public AbstractSubsystem {
 
   void read(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);
   void write(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);
+  void writeIMS(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);
   void flush(Namespace *, DMAFunction &, void *);
   void trim(Namespace *, uint64_t, uint64_t, DMAFunction &, void *);
 

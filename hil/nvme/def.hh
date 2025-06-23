@@ -309,6 +309,9 @@ typedef enum {
   STATUS_ATTRIBUTE_CONFLICT = 0x80,
   STATUS_INVALID_PROTECTION_INFORMATION,
   STATUS_WRITE_TO_READ_ONLY_RANGE,
+
+  /** custom command Errors **/
+  STATUS_LBN_INVALID = 0x90,
 } ERROR_CODE;
 
 typedef enum {
