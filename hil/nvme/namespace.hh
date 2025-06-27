@@ -28,8 +28,8 @@
 #include "util/def.hh"
 #include "util/disk.hh"
 #include "util/simplessd.hh"
-#include "ims/src/def.hh"
-#include "ims/src/IMS_interface.hh"
+#include "ims/firmware/def.hh"
+#include "ims/firmware/IMS_interface.hh"
 
 
 

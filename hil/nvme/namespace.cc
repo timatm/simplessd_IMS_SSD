@@ -18,7 +18,7 @@
  */
 
 #include "hil/nvme/namespace.hh"
-#include "ims/src/IMS_interface.hh"
+#include "ims/firmware/IMS_interface.hh"
 #include "hil/nvme/subsystem.hh"
 #include "util/algorithm.hh"
 
@@ -93,6 +93,7 @@ void Namespace::submitCommand(SQEntryWrapper &req, RequestFunction &func) {
           debugprint(LOG_IMS,
                      "IMS     | Write SSTable | SQ %u:%u | CID %u | NSID %-5d",
                      req.sqID, req.sqUID, req.entry.dword0.commandID, nsid);
+          write_sstable(req, func);
           break;
         case OPCODE_READ_SSTABLE:
           debugprint(LOG_IMS,

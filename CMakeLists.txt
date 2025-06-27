@@ -44,7 +44,7 @@ endif ()
 
 # Add subproject
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/mcpat)
-add_subdirectory(${PROJECT_SOURCE_DIR}/ims/src)
+add_subdirectory(${PROJECT_SOURCE_DIR}/ims/firmware)
 # Set include directories
 include_directories(
   ${PROJECT_SOURCE_DIR}
