@@ -21,6 +21,14 @@
 #include "ims/firmware/IMS_interface.hh"
 #include "hil/nvme/subsystem.hh"
 #include "util/algorithm.hh"
+#include "ims/firmware/lbn_pool.hh"
+#include "ims/firmware/mapping_table.hh"
+#include "ims/firmware/tree.hh"
+
+extern Tree tree;
+extern LBNPool lbnPoolManager; 
+extern Mapping mappingManager;
+
 
 namespace SimpleSSD {
 
@@ -88,6 +96,12 @@ void Namespace::submitCommand(SQEntryWrapper &req, RequestFunction &func) {
           break;
         case OPCODE_DATASET_MANAGEMEMT:
           datasetManagement(req, func);
+          break;
+        case OPCODE_INIT_IMS:
+          debugprint(LOG_IMS,
+                     "IMS     | Init IMS | SQ %u:%u | CID %u | NSID %-5d",
+                     req.sqID, req.sqUID, req.entry.dword0.commandID, nsid);
+          init_IMS(req, func);
           break;
         case OPCODE_WRITE_SSTABLE:
           debugprint(LOG_IMS,
@@ -704,6 +718,31 @@ void Namespace::datasetManagement(SQEntryWrapper &req, RequestFunction &func) {
 }
 
 // Custom command implementation
+void Namespace:: init_IMS(SQEntryWrapper &req, RequestFunction &func) {
+  (void)func;
+  debugprint(LOG_IMS,
+             "NVM     | initialize IMS data structure");
+  bool err = false;
+
+  CQEntryWrapper resp(req);
+  // uint64_t slba = ((uint64_t)req.entry.dword11 << 32) | req.entry.dword10;
+  // uint16_t nlb = (req.entry.dword12 & 0xFFFF) + 1;
+  err = ims.init_IMS();
+  if (err) {
+    debugprint(LOG_IMS,
+             "NVM     | initialize IMS fail");
+    resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                    STATUS_IMS_INIT_FAILD);
+  }
+  else{
+    debugprint(LOG_IMS,
+             "NVM     | initialize IMS success");
+    resp.makeStatus(false, false, TYPE_GENERIC_COMMAND_STATUS,
+                    STATUS_IMS_INIT_SUCCESS);
+  }
+  func(resp);
+}
+
 void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
   bool err = false;
 
@@ -738,6 +777,8 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
                     STATUS_NAMESPACE_NOT_ATTACHED);
   }
   if(request.lbn == INVALIDLBN) {
+    debugprint(LOG_IMS,
+             "NVM     | write_sstable | allocate LBN is invalid");
     err = true;
     resp.makeStatus(true, false, TYPE_COMMAND_SPECIFIC_STATUS,
                     STATUS_LBN_INVALID);
@@ -746,7 +787,7 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
   //   err = true;
   //   warn("nvme_namespace: host tried to write 0 blocks");
   // }
-
+  pr_info("TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
   debugprint(LOG_IMS,
              "NVM     | write_sstable | SQ %u:%u | CID %u | NSID %-5d",
              req.sqID, req.sqUID, req.entry.dword0.commandID, nsid);
@@ -807,6 +848,9 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
     pContext->lpn = LBN2LPN(request.lbn);
     pContext->nlpn = IMSPAGE_NUM;
     pContext->lbn = request.lbn;
+    debugprint(LOG_IMS,
+              "NVM     | write_sstable | IOContext | LPN: %ld (LBN: %ld)| number of LPN: %ld",pContext->lpn ,request.lbn,pContext->nlpn);
+
     CPUContext *pCPU =
         new CPUContext(doread, pContext, CPU::NVME__NAMESPACE, CPU::WRITE);
 
@@ -823,6 +867,34 @@ void Namespace::write_sstable(SQEntryWrapper &req, RequestFunction &func) {
   else {
     func(resp);
   }
+}
+
+void Namespace::monitor_IMS(SQEntryWrapper &req, RequestFunction &func){
+  (void)func;
+  debugprint(LOG_IMS,
+             "NVM     | monitor IMS data structure");
+
+  // bool err = false;
+
+  CQEntryWrapper resp(req);
+  uint32_t Dword2 = req.entry.dword11;
+  switch(Dword2){
+    case DUMP_LBNPOOL_INFO:
+      lbnPoolManager.print();
+      break;
+    // case DUMP_MAPPING_INFO:
+    //   mappingManager.dump_mapping();
+    // break;
+    default:
+      debugprint(LOG_IMS,
+             "NVM     | ERROR mointor IMS does't have this subcommand: %d",Dword2);
+      resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                    STATUS_IMS_INIT_FAILD);       
+      break;
+  }
+  resp.makeStatus(false, false, TYPE_COMMAND_SPECIFIC_STATUS,
+                    STATUS_IMS_INIT_FAILD);
+  func(resp);
 }
 
 

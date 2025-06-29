@@ -30,7 +30,7 @@
 #include "util/simplessd.hh"
 #include "ims/firmware/def.hh"
 #include "ims/firmware/IMS_interface.hh"
-
+#include "ims/firmware/lbn_pool.hh"
 
 
 
@@ -137,7 +137,7 @@ class Namespace {
   void init_IMS(SQEntryWrapper &, RequestFunction &);
   void close_IMS(SQEntryWrapper &, RequestFunction &);
 
-
+  void monitor_IMS(SQEntryWrapper &, RequestFunction &);
  public:
   Namespace(Subsystem *, ConfigData &);
   ~Namespace();
@@ -151,6 +151,11 @@ class Namespace {
   bool isAttached();
 
   void format(uint64_t);
+};
+
+enum {
+  DUMP_LBNPOOL_INFO,
+  DUMP_MAPPING_INFO
 };
 
 }  // namespace NVMe
